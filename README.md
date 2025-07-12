@@ -1,4 +1,4 @@
-# 🚀 React Mastery Tutorial - Top 8 Patterns That Cover 95% of Use Cases
+# 🚀 NextJS React Mastery Tutorial - Top 8 Patterns That Cover 95% of Use Cases
 
 A progressive React tutorial designed for **vibe coders** and developers who want to master React fundamentals through practical examples.
 
