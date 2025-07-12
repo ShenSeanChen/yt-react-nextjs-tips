@@ -7,11 +7,21 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 // =====================================
 // PATTERN 1: useState - State Management
 // =====================================
+
+/*
+🎯 KEY TAKEAWAYS:
+• useState triggers automatic UI re-renders when state changes
+• Regular variables change internally but don't update the UI
+• useState is React's way of connecting data to the visual interface
+• Always use setState functions, never mutate state directly
+*/
 
 function Counter() {
   // 🐍 Python equivalent: self.count = 0 in __init__
@@ -22,6 +32,14 @@ function Counter() {
   // const increment = () => {
   //   count += 1;  // Changes but UI doesn't update!
   //   console.log('Count changed to:', count); // Only shows in console
+  // };
+  // const decrement = () => {
+  //   count -= 1;  // Changes but UI doesn't update!
+  //   console.log('Count changed to:', count);
+  // };
+  // const reset = () => {
+  //   count = 0;  // Changes but UI doesn't update!
+  //   console.log('Count reset to:', count);
   // };
 
   // ✅ GOOD: useState triggers automatic re-renders
@@ -37,15 +55,15 @@ function Counter() {
         Counter Widget
         <span className="pattern-badge">useState</span>
       </h3>
-      <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-        <div style={{ fontSize: '2rem', fontWeight: 'bold', margin: '1rem 0' }}>
+      <div className="text-center mb-4">
+        <div className="text-3xl font-bold my-4">
           {count}
         </div>
-        <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>
+        <p className="text-sm mb-0" style={{ color: 'var(--muted-foreground)' }}>
           Click buttons to see automatic re-renders
         </p>
       </div>
-      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+      <div className="flex gap-2 justify-center">
         <button onClick={decrement} className="btn btn-secondary">-</button>
         <button onClick={reset} className="btn btn-secondary">Reset</button>
         <button onClick={increment} className="btn btn-primary">+</button>
@@ -58,28 +76,48 @@ function Counter() {
 // PATTERN 2: useEffect - Side Effects
 // =====================================
 
+/*
+🎯 KEY TAKEAWAYS:
+• useEffect handles side effects (timers, API calls, subscriptions)
+• Never run side effects directly in render function - causes infinite loops
+• Always clean up side effects to prevent memory leaks
+• Empty dependency array [] means "run once on mount"
+• useEffect cleanup function runs when component unmounts
+*/
+
 function Clock() {
   const [time, setTime] = useState<Date | null>(null);
+  const [showBadExample, setShowBadExample] = useState(false);
+  const [renderCount, setRenderCount] = useState(0);
 
-  // ❌ BAD: Side effect in render function
-  // This creates infinite timers and memory leaks!
-  // setInterval(() => {
-  //   setTime(new Date());
-  // }, 1000);
+  // // // Track renders for demonstration
+  // useEffect(() => {
+  //   setRenderCount(prev => prev + 1);
+  // });
+
+  // // ❌ BAD: Side effect in render function (when demo is active)
+  // if (showBadExample) {
+  //   console.log(`🔥 RENDER #${renderCount}: Creating new timer...`);
+  //   setTimeout(() => {
+  //     setTime(new Date()); // This will trigger another render!
+  //   }, 1000);
+  // }
 
   // ✅ GOOD: useEffect handles side effects properly
   useEffect(() => {
-    // Fix hydration mismatch by only setting time after client mount
-    setTime(new Date());
-    
-    // 🐍 Python: Like __enter__ in context manager
-    const timer = setInterval(() => {
+    if (!showBadExample) {
+      // Fix hydration mismatch by only setting time after client mount
       setTime(new Date());
-    }, 1000);
-    
-    // 🐍 Python: Like __exit__ in context manager
-    return () => clearInterval(timer); // Cleanup prevents memory leaks
-  }, []); // Empty array = run once on mount
+      
+      // 🐍 Python: Like __enter__ in context manager
+      const timer = setInterval(() => {
+        setTime(new Date());
+      }, 1000);
+      
+      // 🐍 Python: Like __exit__ in context manager
+      return () => clearInterval(timer); // Cleanup prevents memory leaks
+    }
+  }, [showBadExample]); // Re-run when demo mode changes
 
   return (
     <div className="widget">
@@ -88,12 +126,40 @@ function Clock() {
         Live Clock
         <span className="pattern-badge">useEffect</span>
       </h3>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '1rem 0' }}>
+      
+      {/* Demo Toggle */}
+      <div className="mb-4 text-center">
+        <button 
+          onClick={() => setShowBadExample(!showBadExample)}
+          className={`btn ${showBadExample ? 'btn-destructive' : 'btn-secondary'}`}
+        >
+          {showBadExample ? '🛑 Stop Bad Demo' : '🔥 Show Bad Example'}
+        </button>
+      </div>
+
+      {/* Visual Feedback */}
+      {showBadExample && (
+        <div className="rounded mb-4 text-center p-2" style={{ 
+          background: 'rgba(255, 68, 68, 0.1)'
+        }}>
+          <div className="text-sm font-bold" style={{ color: '#ff4444' }}>
+            ⚠️ Renders: {renderCount} | Check console!
+          </div>
+          <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+            New timer created every render
+          </div>
+        </div>
+      )}
+
+      <div className="text-center">
+        <div className="text-2xl font-bold my-4">
           {time ? time.toLocaleTimeString() : '--:--:-- --'}
         </div>
-        <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>
-          Updates every second with automatic cleanup
+        <p className="text-sm mb-0" style={{ color: 'var(--muted-foreground)' }}>
+          {showBadExample 
+            ? '🚨 Using setTimeout in render (creating memory leaks!)' 
+            : 'Updates every second with automatic cleanup'
+          }
         </p>
       </div>
     </div>
@@ -103,6 +169,15 @@ function Clock() {
 // =====================================
 // PATTERN 3: Props & Component Composition
 // =====================================
+
+/*
+🎯 KEY TAKEAWAYS:
+• Props make components reusable instead of hardcoded
+• One flexible component is better than many rigid components
+• TypeScript interfaces define what props a component expects
+• Default parameters make components more convenient to use
+• Component composition allows building complex UIs from simple parts
+*/
 
 // ❌ BAD: Hardcoded, not reusable
 // function SubmitButton() {
@@ -114,21 +189,22 @@ function Clock() {
 
 // ✅ GOOD: Reusable component with props
 interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'destructive';
+  variant?: 'primary' | 'secondary' | 'destructive' | 'Sean';
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
   style?: React.CSSProperties;
+  className?: string;
 }
 
-function Button({ variant = 'primary', children, onClick, disabled = false, type = 'button', style }: ButtonProps) {
+function Button({ variant = 'primary', children, onClick, disabled = false, type = 'button', style, className }: ButtonProps) {
   // 🐍 Python: Like function parameters with defaults
   // def button(variant='primary', children=None, on_click=None, disabled=False):
   
   return (
     <button 
-      className={`btn btn-${variant}`}
+      className={`btn btn-${variant} ${className || ''}`}
       onClick={onClick}
       disabled={disabled}
       type={type}
@@ -147,10 +223,10 @@ function ButtonShowcase() {
         Button Variants
         <span className="pattern-badge">Props</span>
       </h3>
-      <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+      <p className="text-sm mb-4" style={{ color: 'var(--muted-foreground)' }}>
         One component, multiple styles via props
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="flex flex-row gap-3 justify-center">
         <Button variant="primary" onClick={() => alert('Primary!')}>
           Primary Button
         </Button>
@@ -163,14 +239,26 @@ function ButtonShowcase() {
         <Button disabled onClick={() => alert('Never fires')}>
           Disabled Button
         </Button>
+        <Button variant='primary' onClick={() => alert('Sean is on fire!')}>
+          Sean Button
+        </Button>
       </div>
     </div>
   );
 }
 
 // =====================================
-// PATTERN 4: Conditional Rendering
+// PATTERN 4: Conditional Rendering - Loading states, error states, feature flags
 // =====================================
+
+/*
+🎯 KEY TAKEAWAYS:
+• Show different UI based on state (loading, error, success)
+• Use logical operators (&&) for simple show/hide conditions
+• Chain conditions to handle multiple states properly
+• Never show all states simultaneously - confuses users
+• Loading states improve user experience during async operations
+*/
 
 interface User {
   name: string;
@@ -181,15 +269,22 @@ function UserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [randomNumber, setRandomNumber] = useState<number | null>(null);
 
   const fetchUser = () => {
     setLoading(true);
     setError(null);
     setUser(null);
+    setRandomNumber(null);
     
     // Simulate API call
     setTimeout(() => {
-      if (Math.random() > 0.7) {
+      const random = Math.random();
+      // Store the random number in state to display in UI
+      setRandomNumber(random);
+      console.log('Random number: ', random);
+      
+      if (random > 0.7) {
         setError('Failed to load user data');
       } else {
         setUser({ name: 'John Doe', email: 'john@example.com' });
@@ -202,12 +297,14 @@ function UserProfile() {
     fetchUser();
   }, []);
 
-  // ❌ BAD: Shows everything at once
+  // ❌ BAD: Shows everything at once - confusing to users!
   // return (
   //   <div className="widget">
+  //     <h3>User Profile</h3>
   //     <div>Loading...</div>
   //     <div>Error: Something went wrong</div>
   //     <div>Welcome, John!</div>
+  //     <div>Please log in</div>
   //   </div>
   // );
 
@@ -222,22 +319,28 @@ function UserProfile() {
       </h3>
       
       {loading && (
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
+        <div className="text-center p-8">
           <div className="status-loading">Loading user data...</div>
         </div>
       )}
       
       {error && (
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
+        <div className="text-center p-8">
           <div className="status-error">❌ {error}</div>
-          <Button onClick={fetchUser} variant="secondary" style={{ marginTop: '1rem' }}>
+          {randomNumber !== null && (
+            <div className="mt-2 text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              Random number: <strong>{randomNumber.toFixed(3)}</strong> 
+              <span style={{ color: '#ff4444' }}> (&gt; 0.7 = Error)</span>
+            </div>
+          )}
+          <Button onClick={fetchUser} variant="secondary" className="mt-4">
             Try Again
           </Button>
         </div>
       )}
       
       {!loading && !error && !user && (
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
+        <div className="text-center p-8">
           <div className="status-loading">Please log in</div>
         </div>
       )}
@@ -245,11 +348,17 @@ function UserProfile() {
       {user && (
         <div>
           <div className="status-success">✅ User loaded successfully!</div>
-          <div style={{ marginTop: '1rem' }}>
+          {randomNumber !== null && (
+            <div className="text-center mt-2 text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              Random number: <strong>{randomNumber.toFixed(3)}</strong> 
+              <span style={{ color: '#22c55e' }}> (≤ 0.7 = Success)</span>
+            </div>
+          )}
+          <div className="mt-4">
             <p><strong>Name:</strong> {user.name}</p>
             <p><strong>Email:</strong> {user.email}</p>
           </div>
-          <Button onClick={fetchUser} variant="secondary" style={{ marginTop: '1rem' }}>
+          <Button onClick={fetchUser} variant="secondary" className="mt-4">
             Reload User
           </Button>
         </div>
@@ -261,6 +370,15 @@ function UserProfile() {
 // =====================================
 // PATTERN 5: List Rendering & Keys
 // =====================================
+
+/*
+🎯 KEY TAKEAWAYS:
+• Always use unique keys when rendering lists in React
+• Keys help React track which items changed, added, or removed
+• Without keys, React may incorrectly update or re-render components
+• Use stable, unique identifiers as keys (not array indexes when possible)
+• Array indexes as keys can cause bugs when list order changes
+*/
 
 interface Todo {
   id: number;
@@ -293,42 +411,42 @@ function TodoList() {
         <span className="pattern-badge">List Rendering</span>
       </h3>
       
-      <div style={{ marginBottom: '1rem' }}>
-        <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>
+      <div className="mb-4">
+        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
           Progress: {completedCount}/{todos.length} completed
         </p>
-        <div style={{ 
-          background: 'var(--muted)', 
-          height: '8px', 
-          borderRadius: '4px',
-          overflow: 'hidden'
+        <div className="h-2 rounded overflow-hidden" style={{ 
+          background: 'var(--muted)'
         }}>
-          <div style={{
+          <div className="h-full transition-all duration-300 ease-out" style={{
             background: 'var(--primary)',
-            height: '100%',
-            width: `${(completedCount / todos.length) * 100}%`,
-            transition: 'width 0.3s ease'
+            width: `${(completedCount / todos.length) * 100}%`
           }} />
         </div>
       </div>
       
       {/* ❌ BAD: No keys - React gets confused when list changes */}
-      {/* {todos.map(todo => 
-        <div onClick={() => toggleTodo(todo.id)}>
-          {todo.text}
-        </div>
-      )} */}
+      {/* <div>
+        <h3>This is the bad example</h3>
+        {todos.map(todo => 
+          <div onClick={() => toggleTodo(todo.id)} className="todo-item">
+            <span>{todo.completed ? '✅' : '⬜'}</span>
+            {todo.text}
+          </div>
+        )}
+      </div> */}
 
       {/* ✅ GOOD: Unique keys help React track items */}
       {/* 🐍 Python: Like enumerate() giving each item an index */}
       <div>
+        <h3>This is the good example</h3>
         {todos.map(todo => (
           <div 
             key={todo.id} 
             onClick={() => toggleTodo(todo.id)}
             className={`todo-item ${todo.completed ? 'todo-completed' : ''}`}
           >
-            <span style={{ marginRight: '0.5rem' }}>
+            <span className="mr-2">
               {todo.completed ? '✅' : '⬜'}
             </span>
             {todo.text}
@@ -340,8 +458,30 @@ function TodoList() {
 }
 
 // =====================================
-// PATTERN 6: Event Handling & Forms
+// PATTERN 6: Event Handling & Forms -- useCallback, useMemo, useEffect, useState
 // =====================================
+
+/*
+🎯 KEY TAKEAWAYS:
+• Controlled components keep form state in React (not DOM)
+• Always prevent default behavior in form submissions
+• Use onChange to keep state in sync with inputs
+• Validate inputs and show helpful error messages
+• useCallback prevents unnecessary re-renders in child components
+• Avoid inline functions in JSX for better performance
+• Store and display multiple submitted data entries for better user experience
+• Side-by-side layout for form and submitted data display
+• Array state management for multiple data entries
+*/
+
+// Type definition for submitted form data
+interface SubmittedFormData {
+  id: number; // Unique identifier for each submission
+  name: string;
+  email: string;
+  message: string;
+  submittedAt: string; // Timestamp when form was submitted
+}
 
 function ContactForm() {
   const [formData, setFormData] = useState({
@@ -350,16 +490,22 @@ function ContactForm() {
     message: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [submittedDataList, setSubmittedDataList] = useState<SubmittedFormData[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [nextId, setNextId] = useState(1); // Counter for generating unique IDs
 
   // ❌ BAD: Inline functions create new functions every render
-  // const handleSubmit = (e) => {
-  //   todos.map(todo => 
-  //     <button onClick={() => deleteTodo(todo.id)}>Delete</button>
-  //   )
-  // }
+  // This causes child components to re-render unnecessarily
+  // const handleSubmit = (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   // Validation logic here
+  //   setSubmitted(true);
+  // };
+  
+  // In JSX: onChange={(e) => setFormData({...formData, name: e.target.value})}
+  // Creates new function every render = performance issue!
 
-  // ✅ GOOD: Proper event handling
+  // ✅ GOOD: useCallback prevents unnecessary re-renders
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -390,30 +536,49 @@ function ContactForm() {
       return;
     }
     
-    setSubmitted(true);
+    // Show loading state during submission
+    setIsSubmitting(true);
+    
+    // Simulate API call delay
     setTimeout(() => {
-      setSubmitted(false);
+      // Create new submission with unique ID
+      const newSubmission: SubmittedFormData = {
+        id: nextId,
+        ...formData,
+        submittedAt: new Date().toLocaleString()
+      };
+      
+      // Add to the list of submissions (newest first)
+      setSubmittedDataList(prev => [newSubmission, ...prev]);
+      setNextId(prev => prev + 1);
+      
+      // Clear form data and reset states
       setFormData({ name: '', email: '', message: '' });
-    }, 2000);
-  }, [formData]);
+      setErrors({});
+      setIsSubmitting(false);
+    }, 1500);
+  }, [formData, nextId]);
 
-  if (submitted) {
-    return (
-      <div className="widget">
-        <h3>
-          <span className="widget-icon">📧</span>
-          Contact Form
-          <span className="pattern-badge">Forms</span>
-        </h3>
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <div className="status-success">✅ Message sent successfully!</div>
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            Form will reset automatically...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Delete specific submission by ID
+  const handleDeleteSubmission = useCallback((id: number) => {
+    setSubmittedDataList(prev => prev.filter(submission => submission.id !== id));
+  }, []);
+
+  // Delete all submissions
+  const handleDeleteAll = useCallback(() => {
+    setSubmittedDataList([]);
+  }, []);
+
+  // Calculate submission statistics using useMemo for performance
+  const submissionStats = useMemo(() => {
+    return {
+      total: submittedDataList.length,
+      uniqueEmails: new Set(submittedDataList.map(s => s.email)).size,
+      avgMessageLength: submittedDataList.length > 0 
+        ? Math.round(submittedDataList.reduce((sum, s) => sum + s.message.length, 0) / submittedDataList.length)
+        : 0
+    };
+  }, [submittedDataList]);
 
   return (
     <div className="widget">
@@ -422,46 +587,308 @@ function ContactForm() {
         Contact Form
         <span className="pattern-badge">Forms</span>
       </h3>
-      <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-        Controlled components with validation
+      <p className="text-sm mb-4" style={{ color: 'var(--muted-foreground)' }}>
+        Controlled components with validation and multiple data persistence
       </p>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '1rem' }}>
-          <input
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="Your name"
-            className="input"
-          />
-          {errors.name && <div className="error">{errors.name}</div>}
+      
+      {/* Side-by-side layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Left side - Form */}
+        <div>
+          <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--muted-foreground)' }}>
+            📝 Submit Message
+          </h4>
+          
+          {isSubmitting && (
+            <div className="mb-4 p-3 rounded text-center" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
+              <div className="status-loading">📤 Sending...</div>
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <input
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Your name"
+                className="input"
+                disabled={isSubmitting}
+              />
+              {errors.name && <div className="error">{errors.name}</div>}
+            </div>
+            
+            <div className="mb-4">
+              <input
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Your email"
+                className="input"
+                disabled={isSubmitting}
+              />
+              {errors.email && <div className="error">{errors.email}</div>}
+            </div>
+            
+            <div className="mb-4">
+              <textarea
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                placeholder="Your message"
+                className="textarea"
+                disabled={isSubmitting}
+              />
+              {errors.message && <div className="error">{errors.message}</div>}
+            </div>
+            
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Sending...' : 'Send Message'}
+            </Button>
+          </form>
         </div>
         
-        <div style={{ marginBottom: '1rem' }}>
-          <input
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Your email"
-            className="input"
-          />
-          {errors.email && <div className="error">{errors.email}</div>}
+        {/* Right side - Submitted Data Display */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
+              📋 Message History
+            </h4>
+            {submittedDataList.length > 0 && (
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteAll}
+                style={{ 
+                  fontSize: '12px', 
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontWeight: '500'
+                }}
+              >
+                🗑️ Clear All
+              </Button>
+            )}
+          </div>
+          
+          {/* Modern Statistics Cards */}
+          {submittedDataList.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="text-center p-3 rounded-xl" style={{ 
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                border: '1px solid rgba(59, 130, 246, 0.2)'
+              }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--primary)' }}>
+                  {submissionStats.total}
+                </div>
+                <div className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                  Total Messages
+                </div>
+              </div>
+              <div className="text-center p-3 rounded-xl" style={{ 
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.2)'
+              }}>
+                <div className="text-2xl font-bold" style={{ color: '#10b981' }}>
+                  {submissionStats.uniqueEmails}
+                </div>
+                <div className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                  Unique Senders
+                </div>
+              </div>
+              <div className="text-center p-3 rounded-xl" style={{ 
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)',
+                border: '1px solid rgba(245, 158, 11, 0.2)'
+              }}>
+                <div className="text-2xl font-bold" style={{ color: '#f59e0b' }}>
+                  {submissionStats.avgMessageLength}
+                </div>
+                <div className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                  Avg Length
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {submittedDataList.length > 0 ? (
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2" style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'var(--muted-foreground) transparent'
+            }}>
+              {submittedDataList.map((submission, index) => (
+                <div 
+                  key={submission.id} 
+                  className="group relative p-4 rounded-2xl transition-all duration-300 hover:scale-[1.02]" 
+                  style={{ 
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  }}
+                >
+                  {/* Modern message header with gradient badge */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="px-3 py-1 rounded-full text-xs font-bold"
+                        style={{ 
+                          background: index === 0 
+                            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                            : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                          color: 'white',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        #{submission.id}
+                      </div>
+                      {index === 0 && (
+                        <div 
+                          className="px-2 py-1 rounded-full text-xs font-medium"
+                          style={{ 
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            color: '#22c55e',
+                            border: '1px solid rgba(34, 197, 94, 0.2)'
+                          }}
+                        >
+                          ✨ Latest
+                        </div>
+                      )}
+                    </div>
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => handleDeleteSubmission(submission.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      style={{ 
+                        fontSize: '11px', 
+                        padding: '4px 8px',
+                        borderRadius: '8px',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        color: '#ef4444'
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                  
+                  {/* Enhanced submission data with better typography */}
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold" style={{ color: 'var(--primary)' }}>
+                          👤 SENDER
+                        </span>
+                      </div>
+                      <div 
+                        className="text-sm font-medium px-3 py-2 rounded-lg"
+                        style={{ 
+                          background: 'var(--muted)',
+                          color: 'var(--foreground)'
+                        }}
+                      >
+                        {submission.name}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold" style={{ color: 'var(--primary)' }}>
+                          📧 EMAIL
+                        </span>
+                      </div>
+                      <div 
+                        className="text-sm font-mono px-3 py-2 rounded-lg"
+                        style={{ 
+                          background: 'var(--muted)',
+                          color: 'var(--foreground)',
+                          fontSize: '12px'
+                        }}
+                      >
+                        {submission.email}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold" style={{ color: 'var(--primary)' }}>
+                          💬 MESSAGE
+                        </span>
+                        <span 
+                          className="text-xs px-2 py-1 rounded-full"
+                          style={{ 
+                            background: 'rgba(99, 102, 241, 0.1)',
+                            color: '#6366f1'
+                          }}
+                        >
+                          {submission.message.length} chars
+                        </span>
+                      </div>
+                      <div 
+                        className="text-sm leading-relaxed px-3 py-2 rounded-lg"
+                        style={{ 
+                          background: 'var(--muted)',
+                          color: 'var(--foreground)',
+                          lineHeight: '1.5'
+                        }}
+                      >
+                        {submission.message}
+                      </div>
+                    </div>
+                    
+                    {/* Modern timestamp with icon */}
+                    <div 
+                      className="flex items-center gap-2 pt-3 mt-3"
+                      style={{ 
+                        borderTop: '1px solid var(--border)'
+                      }}
+                    >
+                      <span className="text-xs">🕒</span>
+                      <span className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                        {submission.submittedAt}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-12 rounded-2xl" style={{ 
+              background: 'linear-gradient(135deg, var(--muted) 0%, rgba(255,255,255,0.1) 100%)',
+              border: '2px dashed var(--border)'
+            }}>
+              {/* Modern empty state */}
+              <div className="mb-4">
+                <div 
+                  className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
+                  style={{ 
+                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                    border: '2px solid rgba(99, 102, 241, 0.2)'
+                  }}
+                >
+                  <span className="text-2xl">📭</span>
+                </div>
+              </div>
+              <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--foreground)' }}>
+                No Messages Yet
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
+                Submit your first message using the form<br />
+                to see it beautifully displayed here!
+              </p>
+              <div 
+                className="inline-block mt-4 px-4 py-2 rounded-full text-xs font-medium"
+                style={{ 
+                  background: 'rgba(99, 102, 241, 0.1)',
+                  color: '#6366f1',
+                  border: '1px solid rgba(99, 102, 241, 0.2)'
+                }}
+              >
+                ✨ Ready for your first message
+              </div>
+            </div>
+          )}
         </div>
-        
-        <div style={{ marginBottom: '1rem' }}>
-          <textarea
-            name="message"
-            value={formData.message}
-            onChange={handleChange}
-            placeholder="Your message"
-            className="textarea"
-          />
-          {errors.message && <div className="error">{errors.message}</div>}
-        </div>
-        
-        <Button type="submit">Send Message</Button>
-      </form>
+      </div>
     </div>
   );
 }
@@ -470,7 +897,16 @@ function ContactForm() {
 // PATTERN 7: Context API (Global State)
 // =====================================
 
-// ❌ BAD: Prop drilling nightmare
+/*
+🎯 KEY TAKEAWAYS:
+• Context API eliminates "prop drilling" (passing props through many levels)
+• Create context with createContext, provide with Provider, consume with useContext
+• Only use context for truly global state (theme, user auth, language)
+• Don't overuse context - local state is often better
+• Always check if context exists before using it
+*/
+
+// ❌ BAD: Prop drilling nightmare - passing props through every level
 // function App() {
 //   const [theme, setTheme] = useState('light');
 //   return (
@@ -479,42 +915,20 @@ function ContactForm() {
 //     <Footer theme={theme} setTheme={setTheme} />
 //   );
 // }
+// function Header({ theme, setTheme }) {
+//   return <Nav theme={theme} setTheme={setTheme} />;
+// }
+// function Nav({ theme, setTheme }) {
+//   return <ThemeButton theme={theme} onClick={setTheme} />;
+// }
 
 // ✅ GOOD: Context API eliminates prop drilling
 // 🐍 Python: Like a global variable, but better managed
-interface ThemeContextType {
-  theme: string;
-  toggleTheme: () => void;
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
-function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState('light');
-  
-  const toggleTheme = useCallback(() => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  }, []);
-
-  // Apply theme class to body element
-  useEffect(() => {
-    document.body.className = theme;
-  }, [theme]);
-
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-}
+// Note: The actual implementation is now in src/contexts/ThemeContext.tsx for better organization
 
 function ThemeToggle() {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('ThemeToggle must be used within ThemeProvider');
-  }
-  
-  const { theme, toggleTheme } = context;
+  // Using the custom hook from our contexts folder
+  const { theme, toggleTheme } = useTheme();
   
   return (
     <div className="widget">
@@ -523,11 +937,11 @@ function ThemeToggle() {
         Theme Switcher
         <span className="pattern-badge">Context API</span>
       </h3>
-      <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+      <p className="text-sm mb-4" style={{ color: 'var(--muted-foreground)' }}>
         Global state without prop drilling
       </p>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>
+      <div className="text-center">
+        <div className="text-xl mb-4">
           Current theme: <strong>{theme}</strong>
         </div>
         <Button onClick={toggleTheme}>
@@ -539,47 +953,33 @@ function ThemeToggle() {
 }
 
 // =====================================
-// PATTERN 8: Custom Hooks & Performance
+// PATTERN 8: Custom Hooks & Performance -- useMemo
 // =====================================
 
+/*
+🎯 KEY TAKEAWAYS:
+• Custom hooks extract reusable stateful logic between components
+• useMemo prevents expensive calculations on every render
+• Only memoize when you have actual performance problems
+• Custom hooks follow the same rules as built-in hooks
+• Hooks must start with "use" and only be called at top level
+• localStorage integration is a perfect use case for custom hooks
+*/
+
 // Custom hook - reusable logic
-function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
-  // 🐍 Python: Like creating a reusable function
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') return initialValue;
-    
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      return initialValue;
-    }
-  });
-
-  const setValue = useCallback((value: T) => {
-    try {
-      setStoredValue(value);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(value));
-      }
-    } catch (error) {
-      console.error('Error saving to localStorage:', error);
-    }
-  }, [key]);
-
-  return [storedValue, setValue];
-}
+// Note: The actual implementation is now in src/hooks/useLocalStorage.ts for better organization
 
 function NotesWidget() {
   const [notes, setNotes] = useLocalStorage<string[]>('tutorial-notes', []);
   const [newNote, setNewNote] = useState('');
 
-  // ❌ BAD: Expensive calculation runs on every render
+  // ❌ BAD: Expensive calculation runs on every render (even when notes don't change)
   // const noteStats = {
   //   total: notes.length,
   //   long: notes.filter(note => note.length > 10).length,
   //   avgLength: notes.reduce((sum, note) => sum + note.length, 0) / notes.length
   // };
+  // console.log('📊 Calculating note statistics...'); // This runs on EVERY render!
 
   // ✅ GOOD: useMemo only recalculates when notes change
   // 🐍 Python: Like @lru_cache decorator
@@ -611,51 +1011,40 @@ function NotesWidget() {
         <span className="pattern-badge">Custom Hooks</span>
       </h3>
       
-      <div style={{ 
-        background: 'var(--muted)', 
-        padding: '0.75rem', 
-        borderRadius: '0.5rem',
-        marginBottom: '1rem',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '0.5rem',
-        textAlign: 'center'
+      <div className="grid grid-cols-3 gap-2 text-center p-3 rounded mb-4" style={{ 
+        background: 'var(--muted)'
       }}>
         <div>
-          <div style={{ fontWeight: 'bold' }}>{noteStats.total}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>Notes</div>
+          <div className="font-bold">{noteStats.total}</div>
+          <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Notes</div>
         </div>
         <div>
-          <div style={{ fontWeight: 'bold' }}>{noteStats.long}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>Long</div>
+          <div className="font-bold">{noteStats.long}</div>
+          <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Long</div>
         </div>
         <div>
-          <div style={{ fontWeight: 'bold' }}>{noteStats.avgLength}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>Avg chars</div>
+          <div className="font-bold">{noteStats.avgLength}</div>
+          <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Avg chars</div>
         </div>
       </div>
       
-      <div style={{ marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div className="mb-4">
+        <div className="flex gap-2">
           <input
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             placeholder="Add a note..."
-            className="input"
+            className="input flex-1"
             onKeyPress={(e) => e.key === 'Enter' && addNote()}
-            style={{ flex: 1 }}
           />
           <Button onClick={addNote}>Add</Button>
         </div>
       </div>
       
-      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+      <div className="max-h-48 overflow-y-auto">
         {notes.length === 0 ? (
-          <p style={{ 
-            color: 'var(--muted-foreground)', 
-            fontSize: '0.875rem',
-            textAlign: 'center',
-            padding: '1rem'
+          <p className="text-sm text-center p-4" style={{ 
+            color: 'var(--muted-foreground)'
           }}>
             No notes yet. Add one above!
           </p>
@@ -669,7 +1058,7 @@ function NotesWidget() {
       </div>
       
       {notes.length > 0 && (
-        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+        <div className="mt-4 text-center">
           <Button variant="destructive" onClick={clearNotes}>
             Clear All Notes
           </Button>
@@ -693,15 +1082,17 @@ interface SectionProps {
 function Section({ number, title, description, children }: SectionProps) {
   return (
     <div className="tutorial-section">
-      <div className="section-header">
-        <div className="pattern-number">{number}</div>
-        <div>
-          <div className="section-title">{title}</div>
-          <div className="section-description">{description}</div>
+      <div className="section-inner">
+        <div className="section-header">
+          <div className="pattern-number">{number}</div>
+          <div>
+            <div className="section-title">{title}</div>
+            <div className="section-description">{description}</div>
+          </div>
         </div>
-      </div>
-      <div className="widgets-grid">
-        {children}
+        <div className="widgets-grid">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -712,15 +1103,11 @@ function Section({ number, title, description, children }: SectionProps) {
 // =====================================
 
 function DashboardContent() {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('DashboardContent must be used within ThemeProvider');
-  }
-  
-  const { theme } = context;
+  // Using the custom hook from our contexts folder
+  const { theme } = useTheme();
 
   return (
-    <div className={`container ${theme}`}>
+    <div className={`dashboard-center ${theme}`}>
       {/* Foundation Patterns */}
       <Section
         number={1}
@@ -741,8 +1128,8 @@ function DashboardContent() {
 
         <Section
           number={3}
-          title="UI Patterns"
-          description="Conditional Rendering - Showing the right content at the right time"
+          title="Conditional Rendering"
+          description="Showing the right content at the right time (Loading states, error states, feature flags)"
         >
           <UserProfile />
         </Section>
@@ -766,7 +1153,7 @@ function DashboardContent() {
         <Section
           number={6}
           title="Global State"
-          description="Context API - Sharing state across components without prop drilling"
+          description="Context API - Sharing state across components without prop drilling - useCallback"
         >
           <ThemeToggle />
         </Section>
@@ -783,9 +1170,5 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
-  return (
-    <ThemeProvider>
-      <DashboardContent />
-    </ThemeProvider>
-  );
+  return <DashboardContent />;
 } 
