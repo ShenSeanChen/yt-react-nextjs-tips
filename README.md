@@ -2,7 +2,7 @@
 
 A progressive React tutorial designed for **vibe coders** and developers who want to master React fundamentals through practical examples.
 
-📹 Full YouTube Guide: [Youtube link][(https://www.youtube.com/watch?v=Pnoq2tIif3s&list=PLE9hy4A7ZTmpGq7GHf5tgGFWh2277AeDR&index=14)](https://www.youtube.com/watch?v=vZzFlAjz4rA&list=PLE9hy4A7ZTmpGq7GHf5tgGFWh2277AeDR&index=15)
+📹 Full YouTube Guide: [Youtube link](https://www.youtube.com/watch?v=vZzFlAjz4rA&list=PLE9hy4A7ZTmpGq7GHf5tgGFWh2277AeDR&index=15)
 
 🚀 X Post: [X link](https://x.com/ShenSeanChen/status/1941531851299926161)
 
