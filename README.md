@@ -4,7 +4,7 @@ A progressive React tutorial designed for **vibe coders** and developers who wan
 
 📹 Full YouTube Guide: [Youtube link](https://www.youtube.com/watch?v=vZzFlAjz4rA&list=PLE9hy4A7ZTmpGq7GHf5tgGFWh2277AeDR&index=15)
 
-🚀 X Post: [X link](https://x.com/ShenSeanChen/status/1941531851299926161)
+🚀 X Post: [X link](https://x.com/ShenSeanChen/status/1944140266501284092)
 
 💻　Launch Full Stack Product: [Github Repo](https://github.com/ShenSeanChen/launch-mvp-stripe-nextjs-supabase)
 
