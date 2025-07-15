@@ -6,7 +6,7 @@ A progressive React tutorial designed for **vibe coders** and developers who wan
 
 🚀 X Post: [X link](https://x.com/ShenSeanChen/status/1944140266501284092)
 
-💻　Launch Full Stack Product: [Github Repo](https://github.com/ShenSeanChen/launch-mvp-stripe-nextjs-supabase)
+💻 Launch Full Stack Product: [Github Repo](https://github.com/ShenSeanChen/launch-mvp-stripe-nextjs-supabase)
 
 ☕️ Buy me a coffee: [Cafe Latte](https://buy.stripe.com/5kA176bA895ggog4gh)
 
