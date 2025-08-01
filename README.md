@@ -10,6 +10,8 @@ A progressive React tutorial designed for **vibe coders** and developers who wan
 
 ☕️ Buy me a coffee: [Cafe Latte](https://buy.stripe.com/5kA176bA895ggog4gh)
 
+🤖️ Discord: [Invite link](https://discord.com/invite/TKKPzZheua)
+
 ## 🎯 Why This Tutorial Exists
 
 Many developers using AI coding tools like **Cursor**, **Lovable**, and **v0** get stuck because they don't understand the fundamental React concepts. This tutorial teaches the **8 essential patterns** that power 95% of React applications.
